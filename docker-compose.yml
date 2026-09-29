@@ -2,7 +2,7 @@ services:
     app:
         build:
             context: .
-            dockerfile: docker/php/Dockerfile
+            dockerfile: Dockerfile.production
         container_name: my-app
         working_dir: /var/www
         volumes:
