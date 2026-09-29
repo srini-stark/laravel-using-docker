@@ -20,16 +20,10 @@ jobs:
       - name: Build Docker Containers
         run: docker compose build
 
-      - name: Test Docker Run
+      - name: Build, Run and Test Laravel App
         run: |
           docker compose up -d
-          sleep 5
+          sleep 20
           docker compose ps
+          docker compose exec -T app php artisan test
           docker compose down -t 1 --remove-orphans
-
-      - name: Run Production Logic Tests
-        run: |
-        docker compose up -d
-        sleep 5
-        docker compose exec -T app php artisan test
-        docker compose down -t 1 --remove-orphans
