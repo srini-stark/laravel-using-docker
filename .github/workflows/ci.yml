@@ -24,6 +24,8 @@ jobs:
         run: |
           docker compose up -d
           docker compose exec -T app composer install --no-interaction --prefer-dist --optimize-autoloader
+          docker compose exec -T app cp .env.example .env
+          docker compose exec -T app php artisan key:generate
           sleep 20
           docker compose ps
           docker compose exec -T app php artisan test
