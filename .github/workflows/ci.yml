@@ -25,6 +25,16 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-composer-
 
+      # [புதிய படி]: கிட்ஹப் சர்வரிலேயே பிஹெச்பி அமைத்து கம்போஸர் ரன் செய்கிறோம், இதனால் வால்யூம் ஓவர்ரைட் சிக்கல் தீரும்!
+      - name: Setup PHP and Install Composer Locally on Runner
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          extensions: mbstring, xml, ctype, iconv, mysql
+
+      - name: Install Composer Dependencies on Runner
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader
+
       # 3. Sets up the modern Docker build engine
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -58,7 +68,7 @@ jobs:
 
       # 9. Runs Laravel database migrations inside CI
       - name: Run Database Migrations inside CI
-        run: docker compose exec -T app php artisan migrate --force
+        run: docker compose exec -T -u root app php artisan migrate --force
 
       # 10. Runs Laravel logic and all business/production tests
       - name: Execute Automated Production Logic Tests
