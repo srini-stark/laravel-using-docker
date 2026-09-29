@@ -8,25 +8,71 @@ on:
 
 jobs:
   build-and-test:
+    name: Build Containers & Run Production Logic Tests
     runs-on: ubuntu-latest
 
     steps:
+      # 1. Downloads your files to the GitHub cloud server
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # 2. Caches Composer packages to speed up the build
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: /tmp/composer-cache
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-composer-
+
+      # 3. Sets up the modern Docker build engine
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      # 4. Builds the Docker images without errors
       - name: Build Docker Containers
         run: docker compose build
 
-      - name: Build, Run and Test Laravel App
+      # 5. Starts the containers in the background
+      - name: Start Docker Containers
+        run: docker compose up -d
+
+      # 6. Prepares the Laravel environment
+      - name: Prepare Laravel Environment
         run: |
-          docker compose up -d
+          # Install Composer dependencies
           docker compose exec -T app composer install --no-interaction --prefer-dist --optimize-autoloader
+
+          # Create the .env file
           docker compose exec -T app cp .env.example .env
+
+          # Generate the Laravel encryption key
           docker compose exec -T app php artisan key:generate
-          sleep 20
-          docker compose ps
-          docker compose exec -T app php artisan test
-          docker compose down -t 1 --remove-orphans
+
+          # Fix permissions for Laravel storage and cache folders
+          docker compose exec -T app chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
+          docker compose exec -T app chmod -R 775 /var/www/storage /var/www/bootstrap/cache
+
+      # 7. Waits specifically until the MySQL port (3306) is ready
+      - name: Wait for MySQL Database Readiness
+        run: |
+          echo "Waiting for MySQL to be ready..."
+          timeout 60s bash -c 'until docker compose exec -T mysql mysqladmin ping -h"127.0.0.1" -uroot -proot --silent; do sleep 2; done'
+          echo "MySQL Database is up and running!"
+
+      # 8. Displays the current container status for debugging
+      - name: Show Running Containers Status
+        run: docker compose ps
+
+      # 9. Runs Laravel database migrations inside CI
+      - name: Run Database Migrations inside CI
+        run: docker compose exec -T app php artisan migrate --force
+
+      # 10. Runs Laravel logic and all business/production tests
+      - name: Execute Automated Production Logic Tests
+        run: docker compose exec -T app php artisan test
+
+      # 11. Safely stops containers and cleans up the server after the job
+      - name: Shutdown and Cleanup Containers
+        if: always()
+        run: docker compose down -t 1 --remove-orphans
