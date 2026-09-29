@@ -40,16 +40,10 @@ jobs:
       # 6. Prepares the Laravel environment
       - name: Prepare Laravel Environment
         run: |
-
-          # Create the .env file
-          docker compose exec -T app cp .env.example .env
-
-          # Generate the Laravel encryption key
-          docker compose exec -T app php artisan key:generate
-
-          # Fix permissions for Laravel storage and cache folders
-          docker compose exec -T app chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
-          docker compose exec -T app chmod -R 775 /var/www/storage /var/www/bootstrap/cache
+          docker compose exec -T -u root app cp .env.example .env
+          docker compose exec -T -u root app php artisan key:generate
+          docker compose exec -T -u root app chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache /var/www/.env
+          docker compose exec -T -u root app chmod -R 775 /var/www/storage /var/www/bootstrap/cache
 
       # 7. Waits specifically until the MySQL port (3306) is ready
       - name: Wait for MySQL Database Readiness
