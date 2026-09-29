@@ -10,7 +10,7 @@ Route::get('/', function () {
 
 Route::get('/test-redis', function () {
     // Store a value in Redis
-    Redis::set('docker_test', 'Redis is working perfectly inside Docker!');
+    Redis::set('docker_test', 'Redis is working perfectly inside Docker!')
 
     // Retrieve the value from Redis
     return Redis::get('docker_test');
